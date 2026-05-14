@@ -126,7 +126,7 @@
     font-size: 13px;
     pointer-events: none;
   }
-  .input-prefix input { padding-left: 22px; }
+  .input-prefix input[type="number"] { padding-left: 22px; }
 
   .input-suffix {
     position: relative;
@@ -140,7 +140,7 @@
     font-size: 12px;
     pointer-events: none;
   }
-  .input-suffix input { padding-right: 40px; }
+  .input-suffix input[type="number"] { padding-right: 40px; }
 
   /* withdrawal scenarios */
   .scenario-row {
@@ -471,7 +471,7 @@
         <div class="s-sub">accumulation phase</div>
       </div>
       <div class="stat-card">
-        <div class="s-label">Projected pot at 65</div>
+        <div class="s-label" id="statPotLabel">Projected pot at 65</div>
         <div class="s-value" id="statPotAtRetirement">–</div>
         <div class="s-sub" id="statPotSub">nominal</div>
       </div>
@@ -664,6 +664,8 @@ function fmtCurrency(val) {
 }
 
 function fmtShort(val) {
+  if (val === null || val === undefined) return '–';
+  if (val < 0) return '-' + fmtShort(-val);
   if (val >= 1e9) return CURRENCY + (val / 1e9).toFixed(1) + 'B';
   if (val >= 1e6) return CURRENCY + (val / 1e6).toFixed(1) + 'M';
   if (val >= 1e3) return CURRENCY + (val / 1e3).toFixed(0) + 'k';
