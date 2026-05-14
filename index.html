@@ -723,7 +723,7 @@ function project(inputs, monthlyWithdraw) {
   for (let age = retirementAge + 1; age <= MAX_AGE; age++) {
     for (let m = 0; m < 12; m++) {
       monthsRetired++;
-      const yearsRetired = monthsRetired / 12;
+      const yearsRetired = (monthsRetired - 1) / 12; // 0-based: first withdrawal = user-specified amount, un-inflated
       const nomWithdraw = monthlyWithdraw * Math.pow(1 + rInf, yearsRetired);
       assets = assets * (1 + rPost / 12) - nomWithdraw;
     }
@@ -973,6 +973,50 @@ function runTests() {
     var highVal = high === null ? Infinity : high;
     var pass = highVal <= lowVal;
     return { pass: pass, detail: 'low withdrawal death=' + (low === null ? 'infinity' : low) + ', high withdrawal death=' + (high === null ? 'infinity' : high) };
+  });
+
+  // T6 – Perpetual fund: monthly interest exceeds monthly withdrawal → should never deplete.
+  // R200,000 at 6% annual (0.5%/mo). Monthly interest = R1,000. Withdraw R800/mo (< R1,000).
+  // Fund grows every month; must survive to MAX_AGE → trueNever = true.
+  test('T6 - Perpetual fund: growth > withdrawal -> trueNever', function() {
+    var inputs = {
+      currentAge: 65, retirementAge: 65,
+      currentAssets: 200000, monthlyContrib: 0,
+      growthPre: 0, growthPost: 6, inflation: 0,
+      inflationAdj: false,
+    };
+    var r = project(inputs, 800);
+    var pass = r.trueNever === true && r.deathAge === null;
+    return { pass: pass, detail: 'trueNever=' + r.trueNever + ', deathAge=' + r.deathAge };
+  });
+
+  // T7 – deathYears invariant: deathYears must equal deathAge - retirementAge whenever both are non-null.
+  test('T7 - Invariant: deathYears === deathAge - retirementAge', function() {
+    var inputs = {
+      currentAge: 65, retirementAge: 65,
+      currentAssets: 1200000, monthlyContrib: 0,
+      growthPre: 0, growthPost: 0, inflation: 0,
+      inflationAdj: false,
+    };
+    var r = project(inputs, 10000);
+    if (r.deathAge === null) return { pass: false, detail: 'deathAge was null (expected finite)' };
+    var expected = r.deathAge - 65;
+    var pass = r.deathYears === expected;
+    return { pass: pass, detail: 'deathYears=' + r.deathYears + ', deathAge-retirementAge=' + expected };
+  });
+
+  // T8 – Zero withdrawal never depletes any positive fund.
+  // Regardless of growth or inflation, if nothing is withdrawn the fund survives forever.
+  test('T8 - Zero withdrawal: any positive fund is perpetual', function() {
+    var inputs = {
+      currentAge: 40, retirementAge: 65,
+      currentAssets: 500000, monthlyContrib: 0,
+      growthPre: 0, growthPost: 0, inflation: 5,
+      inflationAdj: false,
+    };
+    var r = project(inputs, 0);
+    var pass = r.trueNever === true && r.deathAge === null;
+    return { pass: pass, detail: 'trueNever=' + r.trueNever + ', deathAge=' + r.deathAge };
   });
 
   // Report
